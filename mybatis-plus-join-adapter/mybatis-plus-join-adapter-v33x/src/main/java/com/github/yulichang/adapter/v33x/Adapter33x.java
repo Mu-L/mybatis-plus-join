@@ -3,9 +3,9 @@ package com.github.yulichang.adapter.v33x;
 import com.baomidou.mybatisplus.core.metadata.TableFieldInfo;
 import com.baomidou.mybatisplus.core.metadata.TableInfo;
 import com.baomidou.mybatisplus.core.toolkit.StringPool;
-import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.github.yulichang.adapter.base.IAdapter;
 import com.github.yulichang.adapter.base.metadata.OrderFieldInfo;
+import com.github.yulichang.adapter.base.tookit.CharSequenceUtils;
 import com.github.yulichang.adapter.base.tookit.VersionUtils;
 import com.github.yulichang.adapter.jsqlparser.v46.JSqlParserHelperV46;
 import org.apache.ibatis.plugin.Interceptor;
@@ -42,7 +42,7 @@ public class Adapter33x implements IAdapter {
     @Override
     public String mpjMapping(TableFieldInfo tableFieldInfo) {
         String el = tableFieldInfo.getEl();
-        if (StringUtils.isNotBlank(el) && el.contains(StringPool.COMMA)) {
+        if (el != null && el.contains(StringPool.COMMA)) {
             return el.substring(el.indexOf(StringPool.COMMA) + 1);
         }
         return null;
@@ -56,8 +56,8 @@ public class Adapter33x implements IAdapter {
 
     @Override
     public boolean mpjHasPK(TableInfo tableInfo) {
-        return StringUtils.isNotBlank(tableInfo.getKeyProperty()) ||
-                StringUtils.isNotBlank(tableInfo.getKeyColumn());
+        return CharSequenceUtils.isNotBlank(tableInfo.getKeyProperty()) ||
+                CharSequenceUtils.isNotBlank(tableInfo.getKeyColumn());
     }
 
     @Override

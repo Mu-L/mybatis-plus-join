@@ -11,6 +11,7 @@ import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.github.yulichang.config.ConfigProperties;
 import com.github.yulichang.query.interfaces.CompareIfExists;
 import com.github.yulichang.query.interfaces.StringJoin;
+import com.github.yulichang.toolkit.StrUtils;
 import com.github.yulichang.toolkit.TableHelper;
 import com.github.yulichang.toolkit.ThrowOptional;
 import com.github.yulichang.wrapper.enums.IfExistsSqlKeyWordEnum;
@@ -23,6 +24,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -237,7 +240,7 @@ public class MPJLambdaQueryWrapper<T> extends AbstractLambdaWrapper<T, MPJLambda
 
     @Override
     public String getSqlSelect() {
-        if (StringUtils.isBlank(sqlSelect.getStringValue())) {
+        if (StrUtils.isBlank(sqlSelect.getStringValue())) {
             if (CollectionUtils.isNotEmpty(ignoreColumns)) {
                 selectColumns.removeIf(ignoreColumns::contains);
             }
@@ -260,7 +263,7 @@ public class MPJLambdaQueryWrapper<T> extends AbstractLambdaWrapper<T, MPJLambda
     }
 
     public MPJLambdaQueryWrapper<T> setAlias(String alias) {
-        Assert.isTrue(StringUtils.isNotBlank(alias), "别名不能为空");
+        Assert.isTrue(StrUtils.isNotBlank(alias), "别名不能为空");
         this.alias = alias;
         return typedThis;
     }
@@ -302,11 +305,9 @@ public class MPJLambdaQueryWrapper<T> extends AbstractLambdaWrapper<T, MPJLambda
 
     /**
      * 动态表名
-     * 如果主表需要动态表名,主表实体必须添加 @DynamicTableName 注解
-     * 关联表则不需要 加不加注解都会生效
      * <p>
-     *
-     * @see com.github.yulichang.annotation.DynamicTableName
+     * 如果主表需要动态表名
+     * <p>
      */
     public MPJLambdaQueryWrapper<T> setTableName(Function<String, String> func) {
         this.tableNameFunc = func;
@@ -392,10 +393,33 @@ public class MPJLambdaQueryWrapper<T> extends AbstractLambdaWrapper<T, MPJLambda
     }
 
     @Override
-    public MPJLambdaQueryWrapper<T> join(String keyWord, boolean condition, String joinSql) {
+    public MPJLambdaQueryWrapper<T> join(String keyWord, boolean condition, String joinSql, Object... args) {
         if (condition) {
-            from.setStringValue(from.getStringValue() + keyWord + joinSql);
+            from.setStringValue(from.getStringValue() + keyWord + mpjFormatSqlMaybeWithParam(joinSql, args));
         }
         return typedThis;
+    }
+
+    @SuppressWarnings("DuplicatedCode")
+    protected final String mpjFormatSqlMaybeWithParam(String sqlStr, Object... params) {
+        if (StrUtils.isBlank(sqlStr)) {
+            return null;
+        }
+        if (ArrayUtils.isNotEmpty(params)) {
+            for (int i = 0; i < params.length; ++i) {
+                String target = Constants.LEFT_BRACE + i + Constants.RIGHT_BRACE;
+                if (sqlStr.contains(target)) {
+                    sqlStr = sqlStr.replace(target, formatParam(null, params[i]));
+                } else {
+                    Matcher matcher = Pattern.compile("[{]" + i + ",[a-zA-Z0-9.,=]+}").matcher(sqlStr);
+                    if (!matcher.find()) {
+                        throw ExceptionUtils.mpe("Please check the syntax correctness! sql not contains: \"%s\"", target);
+                    }
+                    String group = matcher.group();
+                    sqlStr = sqlStr.replace(group, formatParam(group.substring(target.length(), group.length() - 1), params[i]));
+                }
+            }
+        }
+        return sqlStr;
     }
 }

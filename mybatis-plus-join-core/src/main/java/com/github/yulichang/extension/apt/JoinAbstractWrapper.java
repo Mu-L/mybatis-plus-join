@@ -19,6 +19,7 @@ import com.github.yulichang.extension.apt.interfaces.OnCompare;
 import com.github.yulichang.extension.apt.matedata.Column;
 import com.github.yulichang.toolkit.LambdaUtils;
 import com.github.yulichang.toolkit.MPJSqlInjectionUtils;
+import com.github.yulichang.toolkit.StrUtils;
 import com.github.yulichang.toolkit.Ref;
 import com.github.yulichang.toolkit.sql.SqlScriptUtils;
 import com.github.yulichang.wrapper.enums.IfExistsSqlKeyWordEnum;
@@ -32,6 +33,8 @@ import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static com.baomidou.mybatisplus.core.enums.SqlKeyword.*;
@@ -170,7 +173,7 @@ public abstract class JoinAbstractWrapper<T, Children extends JoinAbstractWrappe
 
     /**
      * 设置 IfExists
-     * .IfExists(val -> val != null && StringUtils.isNotBlank(val))
+     * .IfExists(val -> val != null && StrUtils.isNotBlank(val))
      *
      * @param IfExists 判断
      * @return Children
@@ -280,7 +283,7 @@ public abstract class JoinAbstractWrapper<T, Children extends JoinAbstractWrappe
     @Override
     public Children apply(boolean condition, String applySql, Object... values) {
         return maybeDo(condition, () -> appendSqlSegments(APPLY,
-                () -> formatSqlMaybeWithParam(applySql, null, values)));
+                () -> formatSqlMaybeWithParam(applySql, values)));
     }
 
     public Children applyFunc(String applySql, MFunction<AptConsumer> consumerFunction, Object... values) {
@@ -293,7 +296,7 @@ public abstract class JoinAbstractWrapper<T, Children extends JoinAbstractWrappe
                 () -> {
                     AptConsumer apply = consumerFunction.apply(new AptConsumer());
                     return formatSqlMaybeWithParam(String.format(applySql,
-                                    Arrays.stream(apply.getColumns()).map(this::columnToString).toArray()), null,
+                                    Arrays.stream(apply.getColumns()).map(this::columnToString).toArray()),
                             ArrayUtils.isNotEmpty(values) ? values : apply.getValues());
                 }));
     }
@@ -332,7 +335,7 @@ public abstract class JoinAbstractWrapper<T, Children extends JoinAbstractWrappe
     @Override
     public Children exists(boolean condition, String existsSql, Object... values) {
         return maybeDo(condition, () -> appendSqlSegments(EXISTS,
-                () -> String.format("(%s)", formatSqlMaybeWithParam(existsSql, null, values))));
+                () -> String.format("(%s)", formatSqlMaybeWithParam(existsSql, values))));
     }
 
     @Override
@@ -480,7 +483,7 @@ public abstract class JoinAbstractWrapper<T, Children extends JoinAbstractWrappe
     @Override
     public Children having(boolean condition, String sqlHaving, Object... params) {
         return maybeDo(condition, () -> appendSqlSegments(HAVING,
-                () -> formatSqlMaybeWithParam(sqlHaving, null, params)));
+                () -> formatSqlMaybeWithParam(sqlHaving, params)));
     }
 
     @Override
@@ -572,21 +575,27 @@ public abstract class JoinAbstractWrapper<T, Children extends JoinAbstractWrappe
      * <p>
      * 支持 "{0}" 这种,或者 "sql {0} sql" 这种
      *
-     * @param sqlStr  可能是sql片段
-     * @param mapping 例如: "javaType=int,jdbcType=NUMERIC,typeHandler=xxx.xxx.MyTypeHandler" 这种
-     * @param params  参数
+     * @param sqlStr 可能是sql片段
+     * @param params 参数
      * @return sql片段
      */
-    @SuppressWarnings("SameParameterValue")
-    protected final String formatSqlMaybeWithParam(String sqlStr, String mapping, Object... params) {
-        if (StringUtils.isBlank(sqlStr)) {
-            // todo 何时会这样?
+    protected final String formatSqlMaybeWithParam(String sqlStr, Object... params) {
+        if (StrUtils.isBlank(sqlStr)) {
             return null;
         }
         if (ArrayUtils.isNotEmpty(params)) {
             for (int i = 0; i < params.length; ++i) {
-                final String target = Constants.LEFT_BRACE + i + Constants.RIGHT_BRACE;
-                sqlStr = sqlStr.replace(target, formatParam(mapping, params[i]));
+                String target = Constants.LEFT_BRACE + i + Constants.RIGHT_BRACE;
+                if (sqlStr.contains(target)) {
+                    sqlStr = sqlStr.replace(target, formatParam(null, params[i]));
+                } else {
+                    Matcher matcher = Pattern.compile("[{]" + i + ",[a-zA-Z0-9.,=]+}").matcher(sqlStr);
+                    if (!matcher.find()) {
+                        throw ExceptionUtils.mpe("Please check the syntax correctness! sql not contains: \"%s\"", target);
+                    }
+                    String group = matcher.group();
+                    sqlStr = sqlStr.replace(group, formatParam(group.substring(target.length(), group.length() - 1), params[i]));
+                }
             }
         }
         return sqlStr;
@@ -678,7 +687,7 @@ public abstract class JoinAbstractWrapper<T, Children extends JoinAbstractWrappe
 
     @Override
     public String getSqlComment() {
-        if (StringUtils.isNotBlank(sqlComment.getStringValue())) {
+        if (StrUtils.isNotBlank(sqlComment.getStringValue())) {
             return "/*" + StringEscape.escapeRawString(sqlComment.getStringValue()) + "*/";
         }
         return null;
@@ -686,7 +695,7 @@ public abstract class JoinAbstractWrapper<T, Children extends JoinAbstractWrappe
 
     @Override
     public String getSqlFirst() {
-        if (StringUtils.isNotBlank(sqlFirst.getStringValue())) {
+        if (StrUtils.isNotBlank(sqlFirst.getStringValue())) {
             return StringEscape.escapeRawString(sqlFirst.getStringValue());
         }
         return null;
@@ -863,7 +872,7 @@ public abstract class JoinAbstractWrapper<T, Children extends JoinAbstractWrappe
     public <V> Children allEqStr(boolean condition, Map<String, V> params, boolean null2IsNull) {
         if (condition && CollectionUtils.isNotEmpty(params)) {
             params.forEach((k, v) -> {
-                if (StringUtils.checkValNotNull(v)) {
+                if (StrUtils.checkValNotNull(v)) {
                     eq(k, v);
                 } else {
                     if (null2IsNull) {
@@ -880,7 +889,7 @@ public abstract class JoinAbstractWrapper<T, Children extends JoinAbstractWrappe
         if (condition && CollectionUtils.isNotEmpty(params)) {
             params.forEach((k, v) -> {
                 if (filter.test(k, v)) {
-                    if (StringUtils.checkValNotNull(v)) {
+                    if (StrUtils.checkValNotNull(v)) {
                         eq(k, v);
                     } else {
                         if (null2IsNull) {
