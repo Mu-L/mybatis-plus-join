@@ -10,7 +10,10 @@
 </p>
 <p align="center">
   <a href="https://central.sonatype.com/artifact/com.github.yulichang/mybatis-plus-join-boot-starter">
-    <img alt="maven" src="https://img.shields.io/maven-central/v/com.github.yulichang/mybatis-plus-join-boot-starter.svg?style=flat-square">
+    <img alt="Maven central" src="https://img.shields.io/maven-central/v/com.github.yulichang/mybatis-plus-join-boot-starter.svg?style=flat-square">
+  </a>
+  <a href="https://oss.sonatype.org/content/repositories/snapshots/com/github/yulichang/mybatis-plus-join-boot-starter/">
+    <img alt="Sonatype Nexus (Snapshots)" src="https://img.shields.io/nexus/s/https/oss.sonatype.org/com.github.yulichang/mybatis-plus-join-boot-starter.svg">
   </a>
   <a href="https://www.apache.org/licenses/LICENSE-2.0">
     <img alt="code style" src="https://img.shields.io/badge/license-Apache%202-4EB1BA.svg?style=flat-square">
@@ -47,16 +50,16 @@ QQ群:680016987  或者
   <dependency>
       <groupId>com.github.yulichang</groupId>
       <artifactId>mybatis-plus-join-boot-starter</artifactId>
-      <version>1.5.1</version>
+      <version>1.5.2</version>
   </dependency>
   ```
 - Gradle
   ```
-   implementation 'com.github.yulichang:mybatis-plus-join-boot-starter:1.5.1'
+   implementation 'com.github.yulichang:mybatis-plus-join-boot-starter:1.5.2'
   ```
   或者clone代码到本地执行 mvn install, 再引入以上依赖  
   <br>
-  注意: MyBatis Plus版本需要3.3.0+
+  注意: MyBatis Plus版本需要3.1.2+
   <br>
 
 ### 使用
@@ -111,16 +114,7 @@ WHERE (
     AND t.id > ?)
 ```
 
-
-MPJLambdaWrapper其他功能
-
-* <a href="https://mybatis-plus-join.github.io/pages/core/lambda/select/selectCollection.html" target="_blank">
-  一对一，一对多使用</a>
-* <a href="https://mybatis-plus-join.github.io/pages/core/lambda/select/selectFunc.html" target="_blank">简单的SQL函数使用</a>
-* <a href="https://mybatis-plus-join.github.io/pages/core/lambda/join/leftJoin.html" target="_blank">ON语句多条件支持</a>
-* <a href="https://mybatis-plus-join.github.io" target="_blank">其他全部功能请参考使用文档</a>
-
-# <a href="https://mybatis-plus-join.github.io" target="_blank">使用文档 wiki</a>
+# <a href="https://mybatis-plus-join.github.io" target="_blank">完整使用文档 wiki</a>
 # 用爱发电
 <a href="https://mybatis-plus-join.github.io/pages/quickstart/support.html" target="_blank">
   <img alt="支持一下mybatis-plus-join" src="https://mybatis-plus-join.github.io/support.png">
