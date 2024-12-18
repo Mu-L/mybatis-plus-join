@@ -7,7 +7,6 @@ import com.baomidou.mybatisplus.core.metadata.TableInfo;
 import com.baomidou.mybatisplus.core.toolkit.Assert;
 import com.baomidou.mybatisplus.core.toolkit.Constants;
 import com.baomidou.mybatisplus.core.toolkit.StringPool;
-import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.github.yulichang.adapter.AdapterHelper;
 import com.github.yulichang.config.ConfigProperties;
@@ -15,6 +14,7 @@ import com.github.yulichang.config.enums.LogicDelTypeEnum;
 import com.github.yulichang.toolkit.*;
 import com.github.yulichang.toolkit.support.ColumnCache;
 import com.github.yulichang.wrapper.enums.PrefixEnum;
+import com.github.yulichang.wrapper.ext.Ext;
 import com.github.yulichang.wrapper.interfaces.MConsumer;
 import com.github.yulichang.wrapper.interfaces.MFunction;
 import com.github.yulichang.wrapper.interfaces.QueryJoin;
@@ -41,17 +41,8 @@ import static java.util.stream.Collectors.joining;
  */
 @SuppressWarnings({"DuplicatedCode", "unused"})
 public abstract class JoinAbstractLambdaWrapper<T, Children extends JoinAbstractLambdaWrapper<T, Children>>
-        extends JoinAbstractWrapper<T, Children> implements QueryJoin<Children, T> {
+        extends JoinAbstractWrapper<T, Children> implements QueryJoin<Children, T>, Ext<Children> {
 
-    /**
-     * 主表别名
-     */
-    @Getter
-    protected String alias = ConfigProperties.tableAlias;
-    /**
-     * 副表别名
-     */
-    protected String subTableAlias = ConfigProperties.tableAlias;
     /**
      * 是否存在对一或对多
      */
@@ -229,6 +220,9 @@ public abstract class JoinAbstractLambdaWrapper<T, Children extends JoinAbstract
 
     public String getTableName(String tableName) {
         if (isMain) {
+            if (this.tableName != null) {
+                return this.tableName;
+            }
             if (dynamicTableName) {
                 return tableFunc.apply(tableName);
             }
@@ -239,6 +233,9 @@ public abstract class JoinAbstractLambdaWrapper<T, Children extends JoinAbstract
 
 
     public String getTableNameEnc(String tableName) {
+        if (this.tableName != null) {
+            return this.tableName;
+        }
         Class<T> entityClass = getEntityClass();
         if (entityClass != null) {
             TableInfo tableInfo = TableHelper.get(entityClass);
@@ -383,10 +380,10 @@ public abstract class JoinAbstractLambdaWrapper<T, Children extends JoinAbstract
      * 获取连表部分语句
      */
     public String getFrom() {
-        if (StringUtils.isBlank(from.getStringValue())) {
+        if (StrUtils.isBlank(from.getStringValue())) {
             StringBuilder value = new StringBuilder();
             for (Children wrapper : onWrappers) {
-                if (StringUtils.isBlank(wrapper.from.getStringValue())) {
+                if (StrUtils.isBlank(wrapper.from.getStringValue())) {
                     if (this.subLogicSql && this.logicDelType == LogicDelTypeEnum.ON) {
                         TableInfo tableInfo = TableHelper.getAssert(wrapper.getJoinClass());
                         if (AdapterHelper.getAdapter().mpjHasLogic(tableInfo)) {
@@ -433,6 +430,13 @@ public abstract class JoinAbstractLambdaWrapper<T, Children extends JoinAbstract
         });
     }
 
+    public Children from(MFunction<MPJLambdaWrapper<T>> fromWrapper) {
+        Assert.notNull(getEntityClass(), "main table is null please use JoinWrapper.lambda(Class) or new MPJLambdaWrapper(Class)");
+        MPJLambdaWrapper<T> wrapper = fromWrapper.apply(fromInstance(getEntityClass()));
+        this.tableName = WrapperUtils.buildUnionSqlByWrapper(getEntityClass(), wrapper);
+        return typedThis;
+    }
+
     /**
      * 内部调用, 不建议使用
      */
@@ -440,19 +444,12 @@ public abstract class JoinAbstractLambdaWrapper<T, Children extends JoinAbstract
     public <R> Children join(String keyWord, Class<R> clazz, MConsumer<MPJLambdaWrapper<R>> table, String tableAlias, BiConsumer<JoinAbstractLambdaWrapper<T, ?>, Children> consumer) {
         String tabName;
         if (table != null) {
-            MPJLambdaWrapper<R> tableWrapper = new MPJLambdaWrapper<R>(null, clazz, SharedString.emptyString(),
-                    paramNameSeq, paramNameValuePairs, new MergeSegments(), new SharedString(this.paramAlias
-                    .getStringValue()), SharedString.emptyString(), SharedString.emptyString(), SharedString.emptyString(),
-                    new TableList(), null, null, null, null, ifExists) {
-            };
-            tableWrapper.tableList.setAlias(ConfigProperties.tableAlias);
-            tableWrapper.tableList.setRootClass(clazz);
-
+            MPJLambdaWrapper<R> tableWrapper = fromInstance(clazz);
             table.accept(tableWrapper);
-            if (MPJStringUtils.isBlank(tableWrapper.getSqlSelect())) {
+            if (StrUtils.isBlank(tableWrapper.getSqlSelect())) {
                 tableWrapper.selectAll();
             }
-            tabName = "(" + WrapperUtils.buildUnionSqlByWrapper(clazz, tableWrapper) + ")";
+            tabName = WrapperUtils.buildUnionSqlByWrapper(clazz, tableWrapper);
         } else {
             TableInfo info = TableHelper.getAssert(clazz);
             tabName = info.getTableName();
@@ -463,7 +460,7 @@ public abstract class JoinAbstractLambdaWrapper<T, Children extends JoinAbstract
         instance.isOn = true;
         instance.isMain = false;
         onWrappers.add(instance);
-        if (StringUtils.isBlank(tableAlias)) {
+        if (StrUtils.isBlank(tableAlias)) {
             tableList.put(oldIndex, clazz, false, subTableAlias, newIndex);
             instance.alias = subTableAlias;
             instance.hasAlias = false;
@@ -491,10 +488,10 @@ public abstract class JoinAbstractLambdaWrapper<T, Children extends JoinAbstract
      * @param joinSql   sql
      */
     @Override
-    public Children join(String keyWord, boolean condition, String joinSql) {
+    public Children join(String keyWord, boolean condition, String joinSql, Object... args) {
         if (condition) {
             Children wrapper = instanceEmpty();
-            wrapper.from.setStringValue(joinSql);
+            wrapper.from.setStringValue(formatSqlMaybeWithParam(joinSql, args));
             wrapper.keyWord = keyWord;
             onWrappers.add(wrapper);
         }
@@ -508,7 +505,7 @@ public abstract class JoinAbstractLambdaWrapper<T, Children extends JoinAbstract
      */
     public boolean isUseAnnotationOrderBy() {
         final String _sqlSegment = this.getSqlSegment();
-        if (StringUtils.isBlank(_sqlSegment)) {
+        if (StrUtils.isBlank(_sqlSegment)) {
             return true;
         }
         final String _sqlSegmentToUpperCase = _sqlSegment.toUpperCase();

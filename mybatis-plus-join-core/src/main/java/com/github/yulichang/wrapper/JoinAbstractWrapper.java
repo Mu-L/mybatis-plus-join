@@ -3,7 +3,6 @@ package com.github.yulichang.wrapper;
 import com.baomidou.mybatisplus.core.conditions.ISqlSegment;
 import com.baomidou.mybatisplus.core.conditions.SharedString;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
-import com.baomidou.mybatisplus.core.conditions.interfaces.Nested;
 import com.baomidou.mybatisplus.core.conditions.segments.MergeSegments;
 import com.baomidou.mybatisplus.core.enums.SqlKeyword;
 import com.baomidou.mybatisplus.core.enums.SqlLike;
@@ -14,9 +13,7 @@ import com.baomidou.mybatisplus.core.toolkit.sql.StringEscape;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.github.yulichang.config.ConfigProperties;
 import com.github.yulichang.toolkit.LambdaUtils;
-import com.github.yulichang.toolkit.MPJSqlInjectionUtils;
-import com.github.yulichang.toolkit.Ref;
-import com.github.yulichang.toolkit.TableList;
+import com.github.yulichang.toolkit.*;
 import com.github.yulichang.toolkit.sql.SqlScriptUtils;
 import com.github.yulichang.wrapper.enums.IfExistsSqlKeyWordEnum;
 import com.github.yulichang.wrapper.enums.PrefixEnum;
@@ -30,7 +27,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
-import java.util.function.Supplier;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static com.baomidou.mybatisplus.core.enums.SqlKeyword.*;
 import static com.baomidou.mybatisplus.core.enums.WrapperKeyword.APPLY;
@@ -47,6 +45,15 @@ public abstract class JoinAbstractWrapper<T, Children extends JoinAbstractWrappe
         implements CompareIfExists<Children>, Nested<Children, Children>, Join<Children>, Func<Children>, OnCompare<Children>,
         CompareStrIfExists<Children, String>, FuncStr<Children, String> {
 
+    /**
+     * 主表别名
+     */
+    @Getter
+    protected String alias = ConfigProperties.tableAlias;
+    /**
+     * 副表别名
+     */
+    protected String subTableAlias = ConfigProperties.tableAlias;
     /**
      * 占位符
      */
@@ -155,19 +162,35 @@ public abstract class JoinAbstractWrapper<T, Children extends JoinAbstractWrappe
         return typedThis;
     }
 
-    /**
-     * 转为子类，方便自定义继承扩展
-     */
-    public <C extends Children> C toChildren(Ref<C> children) {
-        return (C) this;
+    protected <E> MPJLambdaWrapper<E> subInstance(Class<E> clazz, String st) {
+        MPJLambdaWrapper<E> wrapper = new MPJLambdaWrapper<E>(null, clazz, SharedString.emptyString(),
+                paramNameSeq, paramNameValuePairs, new MergeSegments(), new SharedString(this.paramAlias
+                .getStringValue()), SharedString.emptyString(), SharedString.emptyString(), SharedString.emptyString(),
+                new TableList(), null, null, null, null, ifExists) {
+        };
+        wrapper.tableList.setAlias(st);
+        wrapper.tableList.setRootClass(clazz);
+        wrapper.tableList.setParent(this.tableList);
+        wrapper.alias = st;
+        wrapper.subTableAlias = st;
+        return wrapper;
     }
 
-    /**
-     * 转为子类，方便自定义继承扩展
-     * 需要子类自定义字段
-     */
-    public <C extends Children> C toChildren(Supplier<C> s) {
-        return (C) this;
+    protected <E> MPJLambdaWrapper<E> fromInstance(Class<E> clazz) {
+        MPJLambdaWrapper<E> wrapper = new MPJLambdaWrapper<E>(null, clazz, SharedString.emptyString(),
+                paramNameSeq, paramNameValuePairs, new MergeSegments(), new SharedString(this.paramAlias
+                .getStringValue()), SharedString.emptyString(), SharedString.emptyString(), SharedString.emptyString(),
+                new TableList(), null, null, null, null, ifExists) {
+        };
+        wrapper.tableList.setAlias(ConfigProperties.tableAlias);
+        wrapper.tableList.setRootClass(clazz);
+        wrapper.alias = ConfigProperties.tableAlias;
+        return wrapper;
+    }
+
+
+    protected <E> MPJLambdaWrapper<E> subInstance(Class<E> clazz) {
+        return subInstance(clazz, ConfigProperties.subQueryAlias);
     }
 
     /**
@@ -185,7 +208,7 @@ public abstract class JoinAbstractWrapper<T, Children extends JoinAbstractWrappe
 
     /**
      * 设置 IfExists
-     * .IfExists(val -> val != null && StringUtils.isNotBlank(val))
+     * .IfExists(val -> val != null && StrUtils.isNotBlank(val))
      *
      * @param IfExists 判断
      * @return Children
@@ -199,7 +222,7 @@ public abstract class JoinAbstractWrapper<T, Children extends JoinAbstractWrappe
     public <X, V> Children allEq(boolean condition, Map<SFunction<X, ?>, V> params, boolean null2IsNull) {
         if (condition && CollectionUtils.isNotEmpty(params)) {
             params.forEach((k, v) -> {
-                if (StringUtils.checkValNotNull(v)) {
+                if (StrUtils.checkValNotNull(v)) {
                     eq(k, v);
                 } else {
                     if (null2IsNull) {
@@ -216,7 +239,7 @@ public abstract class JoinAbstractWrapper<T, Children extends JoinAbstractWrappe
         if (condition && CollectionUtils.isNotEmpty(params)) {
             params.forEach((k, v) -> {
                 if (filter.test(k, v)) {
-                    if (StringUtils.checkValNotNull(v)) {
+                    if (StrUtils.checkValNotNull(v)) {
                         eq(k, v);
                     } else {
                         if (null2IsNull) {
@@ -235,8 +258,18 @@ public abstract class JoinAbstractWrapper<T, Children extends JoinAbstractWrappe
     }
 
     @Override
+    public <X, Y> Children eq(boolean condition, String alias, SFunction<X, ?> column, Class<Y> clazz, MFunction<MPJLambdaWrapper<Y>> wrapper) {
+        return addCondition(condition, alias, column, EQ, clazz, wrapper.apply(subInstance(clazz)));
+    }
+
+    @Override
     public <X> Children ne(boolean condition, String alias, SFunction<X, ?> column, Object val) {
         return addCondition(condition, alias, column, NE, val);
+    }
+
+    @Override
+    public <X, Y> Children ne(boolean condition, String alias, SFunction<X, ?> column, Class<Y> clazz, MFunction<MPJLambdaWrapper<Y>> wrapper) {
+        return addCondition(condition, alias, column, NE, clazz, wrapper.apply(subInstance(clazz)));
     }
 
     @Override
@@ -245,8 +278,18 @@ public abstract class JoinAbstractWrapper<T, Children extends JoinAbstractWrappe
     }
 
     @Override
+    public <X, Y> Children gt(boolean condition, String alias, SFunction<X, ?> column, Class<Y> clazz, MFunction<MPJLambdaWrapper<Y>> wrapper) {
+        return addCondition(condition, alias, column, GT, clazz, wrapper.apply(subInstance(clazz)));
+    }
+
+    @Override
     public <X> Children ge(boolean condition, String alias, SFunction<X, ?> column, Object val) {
         return addCondition(condition, alias, column, GE, val);
+    }
+
+    @Override
+    public <X, Y> Children ge(boolean condition, String alias, SFunction<X, ?> column, Class<Y> clazz, MFunction<MPJLambdaWrapper<Y>> wrapper) {
+        return addCondition(condition, alias, column, GE, clazz, wrapper.apply(subInstance(clazz)));
     }
 
     @Override
@@ -255,8 +298,18 @@ public abstract class JoinAbstractWrapper<T, Children extends JoinAbstractWrappe
     }
 
     @Override
+    public <X, Y> Children lt(boolean condition, String alias, SFunction<X, ?> column, Class<Y> clazz, MFunction<MPJLambdaWrapper<Y>> wrapper) {
+        return addCondition(condition, alias, column, LT, clazz, wrapper.apply(subInstance(clazz)));
+    }
+
+    @Override
     public <X> Children le(boolean condition, String alias, SFunction<X, ?> column, Object val) {
         return addCondition(condition, alias, column, LE, val);
+    }
+
+    @Override
+    public <X, Y> Children le(boolean condition, String alias, SFunction<X, ?> column, Class<Y> clazz, MFunction<MPJLambdaWrapper<Y>> wrapper) {
+        return addCondition(condition, alias, column, LE, clazz, wrapper.apply(subInstance(clazz)));
     }
 
     @Override
@@ -329,7 +382,7 @@ public abstract class JoinAbstractWrapper<T, Children extends JoinAbstractWrappe
     @Override
     public Children apply(boolean condition, String applySql, Object... values) {
         return maybeDo(condition, () -> appendSqlSegments(APPLY,
-                () -> formatSqlMaybeWithParam(applySql, null, values)));
+                () -> formatSqlMaybeWithParam(applySql, values)));
     }
 
     public Children applyFunc(String applySql, MFunction<FuncConsumer> consumerFunction, Object... values) {
@@ -345,10 +398,16 @@ public abstract class JoinAbstractWrapper<T, Children extends JoinAbstractWrappe
                             Arrays.stream(funcConsumer.getArgs()).map(func -> {
                                 if (func instanceof Fun) {
                                     Fun<?, ?> fun = (Fun<?, ?>) func;
+                                    if (fun.isSub()) {
+                                        @SuppressWarnings("rawtypes")
+                                        MPJLambdaWrapper wrapper = fun.getSub().apply((MPJLambdaWrapper) subInstance(fun.getClazz()));
+                                        return WrapperUtils.buildUnionSqlByWrapper(fun.getClazz(),
+                                                fun.getSub().apply(wrapper));
+                                    }
                                     return columnToString(index, fun.getAlias(), fun.getFunc(), false, PrefixEnum.CD_FIRST, false);
                                 }
                                 return columnToString(index, null, func, false, PrefixEnum.CD_FIRST, false);
-                            }).toArray()), null, ArrayUtils.isEmpty(values) ? funcConsumer.getValues() : values);
+                            }).toArray()), ArrayUtils.isEmpty(values) ? funcConsumer.getValues() : values);
                 }));
     }
 
@@ -386,7 +445,13 @@ public abstract class JoinAbstractWrapper<T, Children extends JoinAbstractWrappe
     @Override
     public Children exists(boolean condition, String existsSql, Object... values) {
         return maybeDo(condition, () -> appendSqlSegments(EXISTS,
-                () -> String.format("(%s)", formatSqlMaybeWithParam(existsSql, null, values))));
+                () -> String.format("(%s)", formatSqlMaybeWithParam(existsSql, values))));
+    }
+
+    @Override
+    public <X> Children exists(boolean condition, Class<X> clazz, MFunction<MPJLambdaWrapper<X>> wrapper) {
+        return maybeDo(condition, () -> appendSqlSegments(EXISTS,
+                () -> WrapperUtils.buildUnionSqlByWrapper(clazz, wrapper.apply(subInstance(clazz)))));
     }
 
     @Override
@@ -395,8 +460,19 @@ public abstract class JoinAbstractWrapper<T, Children extends JoinAbstractWrappe
     }
 
     @Override
+    public <X> Children notExists(boolean condition, Class<X> clazz, MFunction<MPJLambdaWrapper<X>> wrapper) {
+        return not(condition).exists(condition, clazz, wrapper);
+    }
+
+    @Override
     public <X> Children isNull(boolean condition, String alias, SFunction<X, ?> column) {
         return maybeDo(condition, () -> appendSqlSegments(columnToSqlSegment(index, alias, column, false), IS_NULL));
+    }
+
+    @Override
+    public <X> Children isNull(boolean condition, String alias, Class<X> clazz, MFunction<MPJLambdaWrapper<X>> wrapper) {
+        return maybeDo(condition, () -> appendSqlSegments(() ->
+                WrapperUtils.buildUnionSqlByWrapper(clazz, wrapper.apply(fromInstance(clazz))), IS_NULL));
     }
 
     @Override
@@ -405,8 +481,20 @@ public abstract class JoinAbstractWrapper<T, Children extends JoinAbstractWrappe
     }
 
     @Override
+    public <X> Children isNotNull(boolean condition, String alias, Class<X> clazz, MFunction<MPJLambdaWrapper<X>> wrapper) {
+        return maybeDo(condition, () -> appendSqlSegments(() ->
+                WrapperUtils.buildUnionSqlByWrapper(clazz, wrapper.apply(fromInstance(clazz))), IS_NOT_NULL));
+    }
+
+    @Override
     public <X> Children in(boolean condition, String alias, SFunction<X, ?> column, Collection<?> coll) {
         return maybeDo(condition, () -> appendSqlSegments(columnToSqlSegment(index, alias, column, false), IN, inExpression(coll)));
+    }
+
+    @Override
+    public <X, Y> Children in(boolean condition, String alias, SFunction<X, ?> column, Class<Y> clazz, MFunction<MPJLambdaWrapper<Y>> wrapper) {
+        return maybeDo(condition, () -> appendSqlSegments(columnToSqlSegment(index, alias, column, false), IN, () ->
+                WrapperUtils.buildUnionSqlByWrapper(clazz, wrapper.apply(fromInstance(clazz)))));
     }
 
     @Override
@@ -417,6 +505,12 @@ public abstract class JoinAbstractWrapper<T, Children extends JoinAbstractWrappe
     @Override
     public <X> Children notIn(boolean condition, String alias, SFunction<X, ?> column, Collection<?> coll) {
         return maybeDo(condition, () -> appendSqlSegments(columnToSqlSegment(index, alias, column, false), NOT_IN, inExpression(coll)));
+    }
+
+    @Override
+    public <X, Y> Children notIn(boolean condition, String alias, SFunction<X, ?> column, Class<Y> clazz, MFunction<MPJLambdaWrapper<Y>> wrapper) {
+        return maybeDo(condition, () -> appendSqlSegments(columnToSqlSegment(index, alias, column, false), NOT_IN, () ->
+                WrapperUtils.buildUnionSqlByWrapper(clazz, wrapper.apply(fromInstance(clazz)))));
     }
 
     @Override
@@ -625,7 +719,7 @@ public abstract class JoinAbstractWrapper<T, Children extends JoinAbstractWrappe
     @Override
     public Children having(boolean condition, String sqlHaving, Object... params) {
         return maybeDo(condition, () -> appendSqlSegments(HAVING,
-                () -> formatSqlMaybeWithParam(sqlHaving, null, params)));
+                () -> formatSqlMaybeWithParam(sqlHaving, params)));
     }
 
     @Override
@@ -682,6 +776,11 @@ public abstract class JoinAbstractWrapper<T, Children extends JoinAbstractWrappe
                 () -> formatParam(null, val)));
     }
 
+    protected <X, R> Children addCondition(boolean condition, String alias, SFunction<X, ?> column, SqlKeyword sqlKeyword, Class<R> clazz, MPJLambdaWrapper<R> val) {
+        return maybeDo(condition, () -> appendSqlSegments(columnToSqlSegment(index, alias, column, false), sqlKeyword,
+                () -> WrapperUtils.buildUnionSqlByWrapper(clazz, val)));
+    }
+
     protected <X, S> Children addCondition(boolean condition, String alias, SFunction<X, ?> column,
                                            SqlKeyword sqlKeyword, String rightAlias, SFunction<S, ?> val) {
         Class<X> c = LambdaUtils.getEntityClass(column);
@@ -724,21 +823,27 @@ public abstract class JoinAbstractWrapper<T, Children extends JoinAbstractWrappe
      * <p>
      * 支持 "{0}" 这种,或者 "sql {0} sql" 这种
      *
-     * @param sqlStr  可能是sql片段
-     * @param mapping 例如: "javaType=int,jdbcType=NUMERIC,typeHandler=xxx.xxx.MyTypeHandler" 这种
-     * @param params  参数
+     * @param sqlStr 可能是sql片段
+     * @param params 参数
      * @return sql片段
      */
-    @SuppressWarnings("SameParameterValue")
-    protected final String formatSqlMaybeWithParam(String sqlStr, String mapping, Object... params) {
-        if (StringUtils.isBlank(sqlStr)) {
-            // todo 何时会这样?
+    protected final String formatSqlMaybeWithParam(String sqlStr, Object... params) {
+        if (StrUtils.isBlank(sqlStr)) {
             return null;
         }
         if (ArrayUtils.isNotEmpty(params)) {
             for (int i = 0; i < params.length; ++i) {
-                final String target = Constants.LEFT_BRACE + i + Constants.RIGHT_BRACE;
-                sqlStr = sqlStr.replace(target, formatParam(mapping, params[i]));
+                String target = Constants.LEFT_BRACE + i + Constants.RIGHT_BRACE;
+                if (sqlStr.contains(target)) {
+                    sqlStr = sqlStr.replace(target, formatParam(null, params[i]));
+                } else {
+                    Matcher matcher = Pattern.compile("[{]" + i + ",[a-zA-Z0-9.,=]+}").matcher(sqlStr);
+                    if (!matcher.find()) {
+                        throw ExceptionUtils.mpe("Please check the syntax correctness! sql not contains: \"%s\"", target);
+                    }
+                    String group = matcher.group();
+                    sqlStr = sqlStr.replace(group, formatParam(group.substring(target.length(), group.length() - 1), params[i]));
+                }
             }
         }
         return sqlStr;
@@ -833,7 +938,7 @@ public abstract class JoinAbstractWrapper<T, Children extends JoinAbstractWrappe
 
     @Override
     public String getSqlComment() {
-        if (StringUtils.isNotBlank(sqlComment.getStringValue())) {
+        if (StrUtils.isNotBlank(sqlComment.getStringValue())) {
             return "/*" + StringEscape.escapeRawString(sqlComment.getStringValue()) + "*/";
         }
         return null;
@@ -841,7 +946,7 @@ public abstract class JoinAbstractWrapper<T, Children extends JoinAbstractWrappe
 
     @Override
     public String getSqlFirst() {
-        if (StringUtils.isNotBlank(sqlFirst.getStringValue())) {
+        if (StrUtils.isNotBlank(sqlFirst.getStringValue())) {
             return StringEscape.escapeRawString(sqlFirst.getStringValue());
         }
         return null;
@@ -968,7 +1073,7 @@ public abstract class JoinAbstractWrapper<T, Children extends JoinAbstractWrappe
     public <V> Children allEqStr(boolean condition, Map<String, V> params, boolean null2IsNull) {
         if (condition && CollectionUtils.isNotEmpty(params)) {
             params.forEach((k, v) -> {
-                if (StringUtils.checkValNotNull(v)) {
+                if (StrUtils.checkValNotNull(v)) {
                     eq(k, v);
                 } else {
                     if (null2IsNull) {
@@ -985,7 +1090,7 @@ public abstract class JoinAbstractWrapper<T, Children extends JoinAbstractWrappe
         if (condition && CollectionUtils.isNotEmpty(params)) {
             params.forEach((k, v) -> {
                 if (filter.test(k, v)) {
-                    if (StringUtils.checkValNotNull(v)) {
+                    if (StrUtils.checkValNotNull(v)) {
                         eq(k, v);
                     } else {
                         if (null2IsNull) {

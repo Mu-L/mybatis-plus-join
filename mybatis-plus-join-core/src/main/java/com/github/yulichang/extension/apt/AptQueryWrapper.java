@@ -14,6 +14,7 @@ import com.github.yulichang.extension.apt.toolkit.AptWrapperUtils;
 import com.github.yulichang.extension.apt.toolkit.AptWrappers;
 import com.github.yulichang.toolkit.Constant;
 import com.github.yulichang.toolkit.LambdaUtils;
+import com.github.yulichang.toolkit.StrUtils;
 import com.github.yulichang.toolkit.TableMap;
 import com.github.yulichang.toolkit.support.ColumnCache;
 import com.github.yulichang.wrapper.enums.IfExistsSqlKeyWordEnum;
@@ -197,7 +198,7 @@ public class AptQueryWrapper<T> extends AptAbstractWrapper<T, AptQueryWrapper<T>
         if (ArrayUtils.isEmpty(apply.getValues())) {
             formatSql = sql;
         } else {
-            formatSql = formatSqlMaybeWithParam(sql, null, apply.getValues());
+            formatSql = formatSqlMaybeWithParam(sql, apply.getValues());
         }
         getSelectColum().add(new SelectApt(apply.getColumns(), () -> formatSql, alias));
         return typedThis;
@@ -291,7 +292,7 @@ public class AptQueryWrapper<T> extends AptAbstractWrapper<T, AptQueryWrapper<T>
      */
     @Override
     public String getSqlSelect() {
-        if (StringUtils.isBlank(sqlSelect.getStringValue()) && CollectionUtils.isNotEmpty(selectColumns)) {
+        if (StrUtils.isBlank(sqlSelect.getStringValue()) && CollectionUtils.isNotEmpty(selectColumns)) {
             String s = selectColumns.stream().map(i -> {
                 if (i.isStr()) {
                     return i.getColumn();
