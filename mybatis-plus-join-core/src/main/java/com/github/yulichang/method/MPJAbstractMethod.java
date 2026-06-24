@@ -41,7 +41,7 @@ public abstract class MPJAbstractMethod extends AbstractMethod352 implements MPJ
     @Override
     protected String sqlSelectColumns(TableInfo table, boolean queryWrapper) {
         String selectColumns = ASTERISK;
-        if (table.getResultMap() == null || (table.getResultMap() != null)) {
+        if (table.getResultMap() == null || table.isAutoInitResultMap()) {
             selectColumns = table.getAllSqlSelect();
             String[] columns = selectColumns.split(StringPool.COMMA);
             List<String> selectColumnList = new ArrayList<>();
