@@ -15,11 +15,6 @@ import org.apache.ibatis.mapping.SqlSource;
  */
 public class SelectJoinPage extends MPJAbstractMethod {
 
-    @SuppressWarnings("deprecation")
-    public SelectJoinPage() {
-        super();
-    }
-
     @SuppressWarnings("unused")
     public SelectJoinPage(String name) {
         super(name);

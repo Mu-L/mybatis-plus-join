@@ -14,11 +14,6 @@ import org.apache.ibatis.mapping.SqlSource;
  */
 public class DeleteJoin extends MPJAbstractMethod {
 
-    @SuppressWarnings("deprecation")
-    public DeleteJoin() {
-        super();
-    }
-
     @SuppressWarnings("unused")
     public DeleteJoin(String name) {
         super(name);

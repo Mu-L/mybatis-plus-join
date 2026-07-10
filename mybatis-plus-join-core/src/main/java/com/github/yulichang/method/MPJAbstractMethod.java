@@ -4,7 +4,6 @@ import com.baomidou.mybatisplus.core.injector.AbstractMethod;
 import com.baomidou.mybatisplus.core.metadata.TableInfo;
 import com.baomidou.mybatisplus.core.toolkit.StringPool;
 import com.baomidou.mybatisplus.core.toolkit.sql.SqlScriptUtils;
-import com.github.yulichang.adapter.v352.AbstractMethod352;
 import com.github.yulichang.config.ConfigProperties;
 import org.apache.ibatis.builder.SqlSourceBuilder;
 
@@ -16,14 +15,7 @@ import java.util.StringTokenizer;
  * @author yulichang
  * @see AbstractMethod
  */
-public abstract class MPJAbstractMethod extends AbstractMethod352 implements MPJBaseMethod {
-
-
-    @Deprecated
-    @SuppressWarnings("DeprecatedIsStillUsed")
-    public MPJAbstractMethod() {
-        super();
-    }
+public abstract class MPJAbstractMethod extends AbstractMethod implements MPJBaseMethod {
 
     @SuppressWarnings({"unused"})
     protected MPJAbstractMethod(String methodName) {

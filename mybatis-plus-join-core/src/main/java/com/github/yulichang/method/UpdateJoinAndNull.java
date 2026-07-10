@@ -14,11 +14,6 @@ import org.apache.ibatis.mapping.SqlSource;
  */
 public class UpdateJoinAndNull extends MPJAbstractMethod {
 
-    @SuppressWarnings("deprecation")
-    public UpdateJoinAndNull() {
-        super();
-    }
-
     @SuppressWarnings("unused")
     public UpdateJoinAndNull(String name) {
         super(name);

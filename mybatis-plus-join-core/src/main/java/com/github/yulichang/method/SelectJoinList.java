@@ -15,11 +15,6 @@ import org.apache.ibatis.mapping.SqlSource;
  */
 public class SelectJoinList extends MPJAbstractMethod {
 
-    @SuppressWarnings("deprecation")
-    public SelectJoinList() {
-        super();
-    }
-
     @SuppressWarnings("unused")
     public SelectJoinList(String name) {
         super(name);

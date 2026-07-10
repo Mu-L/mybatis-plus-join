@@ -51,10 +51,5 @@
             <artifactId>mybatis-plus-join-adapter-jsqlparser</artifactId>
             <version>${revision}</version>
         </dependency>
-        <dependency>
-            <groupId>com.github.yulichang</groupId>
-            <artifactId>mybatis-plus-join-adapter-jsqlparser-v46</artifactId>
-            <version>${revision}</version>
-        </dependency>
     </dependencies>
 </project>

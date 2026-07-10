@@ -17,11 +17,6 @@ import java.util.Optional;
  */
 public class UpdateJoin extends MPJAbstractMethod {
 
-    @SuppressWarnings("deprecation")
-    public UpdateJoin() {
-        super();
-    }
-
     @SuppressWarnings("unused")
     public UpdateJoin(String name) {
         super(name);
