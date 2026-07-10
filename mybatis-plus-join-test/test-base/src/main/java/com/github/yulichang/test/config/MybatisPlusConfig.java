@@ -76,14 +76,6 @@ public class MybatisPlusConfig {
     @Order(Ordered.HIGHEST_PRECEDENCE)
     public ISqlInjector sqlInjector() {
         return new MPJSqlInjector() {
-            @Override
-            @SuppressWarnings("deprecation")
-            public List<AbstractMethod> getMethodList(Class<?> mapperClass) {
-                List<AbstractMethod> list = super.getMethodList(mapperClass);
-                //添加你的方法
-                list.add(new InsertBatchSomeColumn());
-                return list;
-            }
 
             @Override
             @SuppressWarnings("deprecation")
@@ -122,7 +114,7 @@ public class MybatisPlusConfig {
             if (P.test(this.dbType)) {
                 PluginUtils.MPBoundSql mpBoundSql = PluginUtils.mpBoundSql(boundSql);
                 List<ParameterMapping> mappings = mpBoundSql.parameterMappings();
-                mpBoundSql.sql(sql.replaceAll("`", "\""));
+                mpBoundSql.sql(sql.replace("`", "\""));
                 mpBoundSql.parameterMappings(mappings);
             }
             check(sql);
@@ -155,7 +147,7 @@ public class MybatisPlusConfig {
                 if (P.test(this.dbType)) {
                     PluginUtils.MPBoundSql mpBoundSql = PluginUtils.mpBoundSql(boundSql);
                     List<ParameterMapping> mappings = mpBoundSql.parameterMappings();
-                    mpBoundSql.sql(sql.replaceAll("`", "\""));
+                    mpBoundSql.sql(sql.replace("`", "\""));
                     mpBoundSql.parameterMappings(mappings);
                 }
                 if (sql.toUpperCase().startsWith("SELECT")) {
@@ -169,19 +161,19 @@ public class MybatisPlusConfig {
             if (StrUtils.isBlank(sql)) {
                 return sql;
             }
-            sql = sql.replaceAll("\n", "");
-            sql = sql.replaceAll("\r", "");
-            sql = sql.replaceAll("\t", "");
+            sql = sql.replace("\n", "");
+            sql = sql.replace("\r", "");
+            sql = sql.replace("\t", "");
             if (P.test(this.dbType)) {
-                sql = sql.replaceAll("\"", "`");
-                sql = sql.replaceAll("`", "");
+                sql = sql.replace("\"", "`");
+                sql = sql.replace("`", "");
             }
             return dg(sql);
         }
 
         private String dg(String str) {
             if (str.contains(" ")) {
-                str = str.replaceAll(" ", "");
+                str = str.replace(" ", "");
                 return dg(str);
             }
             return str;

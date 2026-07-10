@@ -1,6 +1,7 @@
 package com.github.yulichang.base;
 
-import com.baomidou.mybatisplus.extension.service.IService;
+
+import com.baomidou.mybatisplus.spring.service.IService;
 
 /**
  * 基础service

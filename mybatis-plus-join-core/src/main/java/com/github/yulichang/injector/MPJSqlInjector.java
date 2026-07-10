@@ -4,13 +4,10 @@ import com.baomidou.mybatisplus.core.injector.AbstractMethod;
 import com.baomidou.mybatisplus.core.injector.AbstractSqlInjector;
 import com.baomidou.mybatisplus.core.injector.DefaultSqlInjector;
 import com.baomidou.mybatisplus.core.injector.ISqlInjector;
-import com.baomidou.mybatisplus.core.injector.methods.*;
+import com.baomidou.mybatisplus.core.injector.methods.SelectList;
 import com.baomidou.mybatisplus.core.mapper.Mapper;
 import com.baomidou.mybatisplus.core.metadata.TableInfo;
 import com.baomidou.mybatisplus.core.toolkit.ArrayUtils;
-import com.baomidou.mybatisplus.core.toolkit.ExceptionUtils;
-import com.github.yulichang.adapter.base.tookit.VersionUtils;
-import com.github.yulichang.adapter.v3431.AbstractMethodV3431;
 import com.github.yulichang.base.JoinMapper;
 import com.github.yulichang.method.*;
 import com.github.yulichang.toolkit.MPJTableMapperHelper;
@@ -29,9 +26,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Supplier;
-import java.util.stream.Stream;
-
-import static java.util.stream.Collectors.toList;
 
 /**
  * SQL 注入器
@@ -62,52 +56,6 @@ public class MPJSqlInjector extends DefaultSqlInjector {
         if (Objects.nonNull(sqlInjector) && sqlInjector instanceof AbstractSqlInjector) {
             this.sqlInjector = (AbstractSqlInjector) sqlInjector;
         }
-    }
-
-    /**
-     * 升级到 mybatis plus 3.4.3.2 后对之前的版本兼容
-     */
-    @Deprecated
-    @SuppressWarnings({"unused", "DeprecatedIsStillUsed"})
-    public List<AbstractMethod> getMethodList(Class<?> mapperClass) {
-        if (VersionUtils.compare(VersionUtils.getVersion(), "3.4.3.2") >= 0) {
-            throw ExceptionUtils.mpe("DefaultSqlInjector 的 getMethodList(Class<?> mapperClass) 方法已在 3.4.3.2+ 改为" +
-                    "getMethodList(Class<?> mapperClass, TableInfo tableInfo)\n");
-        }
-        if (Objects.nonNull(sqlInjector)) {
-            List<AbstractMethod> methodList = AbstractMethodV3431.getMethod(sqlInjector, mapperClass);
-            return methodFilter(methodList, mapperClass);
-        } else {
-            List<AbstractMethod> list = Stream.of(
-                    new Insert(),
-                    new DeleteByMap(),
-                    new DeleteById(),
-                    new DeleteBatchByIds(),
-                    new UpdateById(),
-                    new SelectById(),
-                    new SelectBatchByIds(),
-                    new SelectByMap()
-            ).collect(toList());
-            list.addAll(getWrapperMethod());
-            list.addAll(getJoinMethod());
-            return list;
-        }
-    }
-
-    /**
-     * mybatis plus 3.4.3.2
-     * <p>
-     * Deprecated
-     * 3.5.6 getMethodList(Configuration, Class, TableInfo)
-     */
-    @Override
-    @Deprecated
-    @SuppressWarnings({"deprecation", "DeprecatedIsStillUsed"})
-    public List<AbstractMethod> getMethodList(Class<?> mapperClass, TableInfo tableInfo) {
-        if (Objects.nonNull(sqlInjector)) {
-            return methodFilter(sqlInjector.getMethodList(mapperClass, tableInfo), mapperClass);
-        }
-        return methodFilter(super.getMethodList(mapperClass, tableInfo), mapperClass);
     }
 
     @Override
@@ -152,23 +100,13 @@ public class MPJSqlInjector extends DefaultSqlInjector {
      */
     private List<AbstractMethod> getJoinMethod() {
         List<AbstractMethod> list = new ArrayList<>();
-        if (VersionUtils.compare(VersionUtils.getVersion(), "3.5.0") >= 0) {
-            list.add(new DeleteJoin(SqlMethod.DELETE_JOIN.getMethod()));
-            list.add(new UpdateJoin(SqlMethod.UPDATE_JOIN.getMethod()));
-            list.add(new UpdateJoinAndNull(SqlMethod.UPDATE_JOIN_AND_NULL.getMethod()));
-            list.add(new SelectJoinCount(SqlMethod.SELECT_JOIN_COUNT.getMethod()));
-            list.add(new SelectJoinOne(SqlMethod.SELECT_JOIN_ONE.getMethod()));
-            list.add(new SelectJoinList(SqlMethod.SELECT_JOIN_LIST.getMethod()));
-            list.add(new SelectJoinPage(SqlMethod.SELECT_JOIN_PAGE.getMethod()));
-        } else {
-            list.add(new DeleteJoin());
-            list.add(new UpdateJoin());
-            list.add(new UpdateJoinAndNull());
-            list.add(new SelectJoinCount());
-            list.add(new SelectJoinOne());
-            list.add(new SelectJoinList());
-            list.add(new SelectJoinPage());
-        }
+        list.add(new DeleteJoin(SqlMethod.DELETE_JOIN.getMethod()));
+        list.add(new UpdateJoin(SqlMethod.UPDATE_JOIN.getMethod()));
+        list.add(new UpdateJoinAndNull(SqlMethod.UPDATE_JOIN_AND_NULL.getMethod()));
+        list.add(new SelectJoinCount(SqlMethod.SELECT_JOIN_COUNT.getMethod()));
+        list.add(new SelectJoinOne(SqlMethod.SELECT_JOIN_ONE.getMethod()));
+        list.add(new SelectJoinList(SqlMethod.SELECT_JOIN_LIST.getMethod()));
+        list.add(new SelectJoinPage(SqlMethod.SELECT_JOIN_PAGE.getMethod()));
         return list;
     }
 

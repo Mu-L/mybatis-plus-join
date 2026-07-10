@@ -9,7 +9,6 @@ import com.baomidou.mybatisplus.core.metadata.TableFieldInfo;
 import com.baomidou.mybatisplus.core.metadata.TableInfo;
 import com.baomidou.mybatisplus.core.toolkit.*;
 import com.github.yulichang.adapter.AdapterHelper;
-import com.github.yulichang.adapter.base.tookit.VersionUtils;
 import com.github.yulichang.config.ConfigProperties;
 import com.github.yulichang.query.interfaces.CompareIfExists;
 import com.github.yulichang.query.interfaces.StringJoin;
@@ -101,13 +100,7 @@ public class MPJQueryWrapper<T> extends AbstractWrapper<T, String, MPJQueryWrapp
     }
 
     public MPJQueryWrapper(Class<T> clazz) {
-        try {
-            super.setEntityClass(clazz);
-        } catch (NoSuchMethodError error) {
-            if (VersionUtils.compare(VersionUtils.getVersion(), "3.3.0") > 0) {
-                throw error;
-            }
-        }
+        super.setEntityClass(clazz);
         super.initNeed();
     }
 

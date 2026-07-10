@@ -6,7 +6,6 @@ import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
 import com.baomidou.mybatisplus.core.toolkit.Constants;
 import com.baomidou.mybatisplus.core.toolkit.StringPool;
 import com.github.yulichang.adapter.AdapterHelper;
-import com.github.yulichang.adapter.base.tookit.VersionUtils;
 import com.github.yulichang.config.ConfigProperties;
 import com.github.yulichang.interfaces.MPJBaseJoin;
 import com.github.yulichang.toolkit.*;
@@ -44,13 +43,12 @@ import java.util.concurrent.ConcurrentHashMap;
 @Intercepts(@Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class}))
 public class MPJInterceptor implements Interceptor {
 
-    private static final boolean v = VersionUtils.compare(VersionUtils.getVersion(), "3.4.3.1") > 0;
-
     private static final List<ResultMapping> EMPTY_RESULT_MAPPING = new ArrayList<>(0);
 
     private static final Map<String, Val> MS_MAPPER_CACHE = new ConcurrentHashMap<>();
 
     private static final Map<String, Val> RES_MAPPER_CACHE = new ConcurrentHashMap<>();
+
     private static final Log log = LogFactory.getLog(MPJInterceptor.class);
 
     @Override
@@ -286,7 +284,7 @@ public class MPJInterceptor implements Interceptor {
             childId.append("]");
         }
         //双检
-        String id = v ? childId.toString() : childId.toString().replaceAll("\\.", "~");
+        String id = childId.toString();
         if (!ms.getConfiguration().hasResultMap(id)) {
             ResultMap build = new ResultMap.Builder(ms.getConfiguration(), id, mybatisLabel.getOfType(), childMapping).build();
             MPJInterceptor.addResultMap(ms, id, build);
@@ -397,7 +395,7 @@ public class MPJInterceptor implements Interceptor {
 
         clazz = RES_MAPPER_CACHE.computeIfAbsent(resource, key -> {
             try {
-                String className = key.substring(0, key.lastIndexOf(StringPool.DOT)).replaceAll("/", StringPool.DOT);
+                String className = key.substring(0, key.lastIndexOf(StringPool.DOT)).replace("/", StringPool.DOT);
                 try {
                     return new Val(Class.forName(className));
                 } catch (ClassNotFoundException e) {

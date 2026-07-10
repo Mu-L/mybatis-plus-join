@@ -1,13 +1,13 @@
 package com.github.yulichang.repository;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.baomidou.mybatisplus.extension.repository.CrudRepository;
+import com.baomidou.mybatisplus.spring.repository.CrudRepository;
 
 /**
  * {@link CrudRepository}
  * {@link JoinRepository}
  *
- * @auther yulichang
+ * @author yulichang
  * @since 1.5.2
  */
 @SuppressWarnings("unused")

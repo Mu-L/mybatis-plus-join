@@ -3,7 +3,6 @@ package com.github.yulichang.test.join.apt;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.github.yulichang.adapter.base.tookit.VersionUtils;
 import com.github.yulichang.extension.apt.AptQueryWrapper;
 import com.github.yulichang.extension.apt.toolkit.AptWrappers;
 import com.github.yulichang.test.join.dto.AddressDTO;
@@ -1093,26 +1092,15 @@ class AptWrapperTest {
      */
     @Test
     void joinOrder() {
-        if (VersionUtils.compare(VersionUtils.getVersion(), "3.4.3") >= 0) {
-            ThreadLocalUtils.set("SELECT id,user_id,name FROM order_t t ORDER BY t.name DESC",
-                    "SELECT t.id, t.user_id, t.name FROM order_t t ORDER BY t.name DESC",
-                    "SELECT id,user_id,name FROM order_t t ORDER BY t.name desc");
-        } else {
-            ThreadLocalUtils.set("SELECT id,user_id,name FROM order_t t",
-                    "SELECT id,user_id,name FROM order_t t");
-        }
+        ThreadLocalUtils.set("SELECT id,user_id,name FROM order_t t ORDER BY t.name DESC",
+                "SELECT t.id, t.user_id, t.name FROM order_t t ORDER BY t.name DESC",
+                "SELECT id,user_id,name FROM order_t t ORDER BY t.name desc");
         OrderDOCol o = OrderDOCol.build();
         AptQueryWrapper<OrderDO> wrapper = AptWrappers.query(o);
         List<OrderDO> list = wrapper.list();
 
-        if (VersionUtils.compare(VersionUtils.getVersion(), "3.4.3") >= 0) {
-            ThreadLocalUtils.set("SELECT t.id,t.user_id,t.name,t1.`name` AS userName FROM order_t t LEFT JOIN `user` t1 ON (t1.id = t.user_id) WHERE t1.del=false ORDER BY t.name DESC",
-                    "SELECT t.id,t.user_id,t.name,t1.`name` AS userName FROM order_t t LEFT JOIN `user` t1 ON (t1.id = t.user_id) WHERE t1.del=false ORDER BY t.name desc");
-        } else {
-            ThreadLocalUtils.set("SELECT t.id,t.user_id,t.name,t1.`name` AS userName FROM order_t t LEFT JOIN `user` t1 ON (t1.id = t.user_id) WHERE t1.del=false",
-                    "SELECT t.id,t.user_id,t.name,t1.`name` AS userName FROM order_t t LEFT JOIN `user` t1 ON (t1.id = t.user_id) WHERE t1.del=false");
-        }
-
+        ThreadLocalUtils.set("SELECT t.id,t.user_id,t.name,t1.`name` AS userName FROM order_t t LEFT JOIN `user` t1 ON (t1.id = t.user_id) WHERE t1.del=false ORDER BY t.name DESC",
+                "SELECT t.id,t.user_id,t.name,t1.`name` AS userName FROM order_t t LEFT JOIN `user` t1 ON (t1.id = t.user_id) WHERE t1.del=false ORDER BY t.name desc");
         UserDOCol u = UserDOCol.build();
         OrderDOCol o1 = OrderDOCol.build();
         AptQueryWrapper<OrderDO> w = AptWrappers.query(o1)
